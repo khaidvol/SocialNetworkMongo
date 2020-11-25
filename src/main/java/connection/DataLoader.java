@@ -20,11 +20,11 @@ public class DataLoader {
   private static final String BATCH_FINISH = "Batch #%s/%s stored successfully!";
   private static final String DELIMITER = "-----------------------------------------";
 
-  private static final String USERS_COLLECTION = "users";
-  private static final String MOVIES_COLLECTION = "movies";
-  private static final String AUDIO_TRACKS_COLLECTION = "audio_tracks";
-  private static final String MESSAGES_COLLECTION = "messages";
-  private static final String FRIENDSHIPS_COLLECTION = "friendships";
+  private static final String USERS = "users";
+  private static final String MOVIES = "movies";
+  private static final String AUDIO_TRACKS = "audio_tracks";
+  private static final String MESSAGES = "messages";
+  private static final String FRIENDSHIPS = "friendships";
 
   public static final long BATCH_SIZE = 100_000;
 
@@ -47,18 +47,18 @@ public class DataLoader {
   public static void loadUsers(
       long batchSize, long numberOfUsers, long maxNumberOfMovies, long maxNumberOfAudioTracks) {
 
-    MongoCollection<Document> collection = MONGO_DATABASE.getCollection(USERS_COLLECTION);
-
+    MongoCollection<Document> collection = MONGO_DATABASE.getCollection(USERS);
+    // start iteration
     long numberOfBatches = numberOfUsers / batchSize;
     long startUsersId = 0;
     long endUsersId = batchSize;
 
     for (long i = 0; i < numberOfBatches; i++) {
-      // generate movies
+      // generate users
       List<User> users =
           DataGenerator.generateUsers(
               startUsersId, endUsersId, maxNumberOfMovies, maxNumberOfAudioTracks);
-      // map movies to documents list
+      // map users to the documents list
       List<Document> usersDocs =
           users.stream()
               .map(
@@ -67,16 +67,15 @@ public class DataLoader {
                           .append("name", user.getName())
                           .append("surname", user.getSurname())
                           .append("birthday", user.getBirthdate())
-                          .append("movies", user.getMovies())
-                          .append("audio_tracks", user.getAudioTracks()))
+                          .append(MOVIES, user.getMovies())
+                          .append(AUDIO_TRACKS, user.getAudioTracks()))
               .collect(Collectors.toList());
-
-      // load users to mongodb
+      // load users to the mongodb
       LOGGER.info(String.format(BATCH_START, i + 1, numberOfBatches));
       collection.insertMany(usersDocs);
       LOGGER.info(String.format(BATCH_FINISH, i + 1, numberOfBatches));
       LOGGER.info(DELIMITER);
-
+      // iteration for next batch
       startUsersId = endUsersId;
       endUsersId += batchSize;
     }
@@ -84,8 +83,8 @@ public class DataLoader {
 
   public static void loadMovies(long batchSize, long numberOfMovies) {
 
-    MongoCollection<Document> collection = MONGO_DATABASE.getCollection(MOVIES_COLLECTION);
-
+    MongoCollection<Document> collection = MONGO_DATABASE.getCollection(MOVIES);
+    // start iteration
     long numberOfBatches = numberOfMovies / batchSize;
     long startMoviesId = 0;
     long endMoviesId = batchSize;
@@ -93,7 +92,7 @@ public class DataLoader {
     for (long i = 0; i < numberOfBatches; i++) {
       // generate movies
       List<Movie> movies = DataGenerator.generateMovies(startMoviesId, endMoviesId);
-      // map movies to documents list
+      // map movies to the documents list
       List<Document> moviesDocs =
           movies.stream()
               .map(
@@ -104,13 +103,12 @@ public class DataLoader {
                           .append("year", movie.getYear()))
               .collect(Collectors.toList());
 
-      // load movies to mongodb
+      // load movies to the mongodb
       LOGGER.info(String.format(BATCH_START, i + 1, numberOfBatches));
       collection.insertMany(moviesDocs);
       LOGGER.info(String.format(BATCH_FINISH, i + 1, numberOfBatches));
       LOGGER.info(DELIMITER);
-
-      // increment ids for next batch
+      // iteration for next batch
       startMoviesId = endMoviesId;
       endMoviesId += batchSize;
     }
@@ -118,18 +116,17 @@ public class DataLoader {
 
   public static void loadAudioTracks(long batchSize, long numberOfAudioTracks) {
 
-    MongoCollection<Document> collection = MONGO_DATABASE.getCollection(AUDIO_TRACKS_COLLECTION);
-
+    MongoCollection<Document> collection = MONGO_DATABASE.getCollection(AUDIO_TRACKS);
+    // start iteration
     long numberOfBatches = numberOfAudioTracks / batchSize;
-
     long startAudioTracksId = 0;
     long endAudioTracksId = batchSize;
 
     for (long i = 0; i < numberOfBatches; i++) {
-      // generate movies
+      // generate audio tracks list
       List<AudioTrack> audioTracks =
           DataGenerator.generateAudioTracks(startAudioTracksId, endAudioTracksId);
-      // map movies to documents list
+      // map audio tracks to the documents list
       List<Document> audioTracksDocs =
           audioTracks.stream()
               .map(
@@ -141,12 +138,12 @@ public class DataLoader {
                           .append("year", audioTrack.getYear()))
               .collect(Collectors.toList());
 
-      // load audio tracks to mongodb
+      // load audio tracks to the mongodb
       LOGGER.info(String.format(BATCH_START, i + 1, numberOfBatches));
       collection.insertMany(audioTracksDocs);
       LOGGER.info(String.format(BATCH_FINISH, i + 1, numberOfBatches));
       LOGGER.info(DELIMITER);
-
+      // iteration for next batch
       startAudioTracksId = endAudioTracksId;
       endAudioTracksId += batchSize;
     }
@@ -154,17 +151,17 @@ public class DataLoader {
 
   public static void loadMessages(long batchSize, long numberOfMessages, long maxNumberOfUsers) {
 
-    MongoCollection<Document> collection = MONGO_DATABASE.getCollection(MESSAGES_COLLECTION);
-
+    MongoCollection<Document> collection = MONGO_DATABASE.getCollection(MESSAGES);
+    // start iteration
+    long numberOfBatches = numberOfMessages / batchSize;
     long startMessagesId = 0;
     long endMessagesId = batchSize;
 
-    long numberOfBatches = numberOfMessages / batchSize;
     for (long i = 0; i < numberOfBatches; i++) {
-      // generate movies
+      // generate messages list
       List<Message> messages =
           DataGenerator.generateMessages(startMessagesId, endMessagesId, maxNumberOfUsers);
-      // map movies to documents list
+      // map messages to the documents list
       List<Document> messagesDocs =
           messages.stream()
               .map(
@@ -176,12 +173,12 @@ public class DataLoader {
                           .append("date", message.getDate()))
               .collect(Collectors.toList());
 
-      // load movies to mongodb
+      // load messages to the the mongodb
       LOGGER.info(String.format(BATCH_START, i + 1, numberOfBatches));
       collection.insertMany(messagesDocs);
       LOGGER.info(String.format(BATCH_FINISH, i + 1, numberOfBatches));
       LOGGER.info(DELIMITER);
-
+      // iteration for next batch
       startMessagesId = endMessagesId;
       endMessagesId += batchSize;
     }
@@ -190,17 +187,17 @@ public class DataLoader {
   public static void loadFriendships(
       long batchSize, long numberOfFriendships, long maxNumberOfUsers) {
 
-    MongoCollection<Document> collection = MONGO_DATABASE.getCollection(FRIENDSHIPS_COLLECTION);
-
+    MongoCollection<Document> collection = MONGO_DATABASE.getCollection(FRIENDSHIPS);
+    // start iteration
     long startFriendshipsId = 0;
     long endFriendshipsId = batchSize;
-
     long numberOfBatches = numberOfFriendships / batchSize;
+
     for (long i = 0; i < numberOfBatches; i++) {
-      // generate friendships
+      // generate friendships list
       List<Friendship> friendships =
           DataGenerator.generateFriendships(startFriendshipsId, endFriendshipsId, maxNumberOfUsers);
-      // map friendships to documents list
+      // map friendships to the documents list
       List<Document> friendshipsDocs =
           friendships.stream()
               .map(
@@ -210,12 +207,12 @@ public class DataLoader {
                           .append("friends", friendship.getFriendsIds()))
               .collect(Collectors.toList());
 
-      // load friendships to mongodb
+      // load friendships to the mongodb
       LOGGER.info(String.format(BATCH_START, i + 1, numberOfBatches));
       collection.insertMany(friendshipsDocs);
       LOGGER.info(String.format(BATCH_FINISH, i + 1, numberOfBatches));
       LOGGER.info(DELIMITER);
-
+      // iteration for next batch
       startFriendshipsId = endFriendshipsId;
       endFriendshipsId += batchSize;
     }

@@ -1,6 +1,5 @@
 package logic;
 
-import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.*;
@@ -15,20 +14,24 @@ import java.util.List;
 public class ActivityReport {
 
   public static final Logger LOGGER = Logger.getLogger(ActivityReport.class);
-
-  public static final MongoClient MONGO_CLIENT = DatabaseConnection.getMongoClient();
   public static final MongoDatabase MONGO_DATABASE = DatabaseConnection.getMongoDatabase();
 
-  private static final String USERS_COLLECTION = "users";
-  private static final String MESSAGES_COLLECTION = "messages";
-  private static final String FRIENDSHIPS_COLLECTION = "friendships";
+  private static final String USERS = "users";
+  private static final String MESSAGES = "messages";
+  private static final String FRIENDSHIPS = "friendships";
+  public static final String NUMBER_OF_MOVIES = "numberOfMovies";
+  public static final String MONTH = "month";
+  public static final String SIGNED_DATE = "$date";
+  public static final String SIGNED_YEAR = "$year";
+  public static final String SIGNED_MONTH = "$month";
+  public static final String SIGNED_SIZE = "$size";
 
-  private static MongoCollection<Document> messagesCollection =
-      MONGO_DATABASE.getCollection(MESSAGES_COLLECTION);
-  private static MongoCollection<Document> friendshipsCollection =
-      MONGO_DATABASE.getCollection(FRIENDSHIPS_COLLECTION);
-  private static MongoCollection<Document> usersCollection =
-      MONGO_DATABASE.getCollection(USERS_COLLECTION);
+  private static final MongoCollection<Document> messagesCollection =
+      MONGO_DATABASE.getCollection(MESSAGES);
+  private static final MongoCollection<Document> friendshipsCollection =
+      MONGO_DATABASE.getCollection(FRIENDSHIPS);
+  private static final MongoCollection<Document> usersCollection =
+      MONGO_DATABASE.getCollection(USERS);
 
   private ActivityReport() {}
 
@@ -50,14 +53,15 @@ public class ActivityReport {
                     Aggregates.project(
                         Projections.fields(
                             Projections.include("id"),
-                            Projections.computed("year", new Document("$year", "$date")),
-                            Projections.computed("month", new Document("$month", "$date")),
-                            Projections.computed("week", new Document("$week", "$date")),
-                            Projections.computed("dayOfWeek", new Document("$dayOfWeek", "$date")),
+                            Projections.computed("year", new Document(SIGNED_YEAR, SIGNED_DATE)),
+                            Projections.computed(MONTH, new Document(SIGNED_MONTH, SIGNED_DATE)),
+                            Projections.computed("week", new Document("$week", SIGNED_DATE)),
+                            Projections.computed(
+                                "dayOfWeek", new Document("$dayOfWeek", SIGNED_DATE)),
                             Projections.excludeId())),
                     Aggregates.group(
-                        new Document("year", "$year")
-                            .append("month", "$month")
+                        new Document("year", SIGNED_YEAR)
+                            .append(MONTH, SIGNED_MONTH)
                             .append("week", "$week")
                             .append("dayOfWeek", "$dayOfWeek"),
                         Accumulators.sum("totalMessagesPerWeekDay", 1)),
@@ -89,12 +93,13 @@ public class ActivityReport {
                 Arrays.asList(
                     Aggregates.project(
                         Projections.fields(
-                            Projections.computed("year", new Document("$year", "$date")),
-                            Projections.computed("month", new Document("$month", "$date")),
-                            Projections.computed("friendships", new Document("$size", "$friends")),
+                            Projections.computed("year", new Document(SIGNED_YEAR, SIGNED_DATE)),
+                            Projections.computed(MONTH, new Document(SIGNED_MONTH, SIGNED_DATE)),
+                            Projections.computed(
+                                FRIENDSHIPS, new Document(SIGNED_SIZE, "$friends")),
                             Projections.excludeId())),
                     Aggregates.group(
-                        new Document("year", "$year").append("month", "$month"),
+                        new Document("year", SIGNED_YEAR).append(MONTH, SIGNED_MONTH),
                         Accumulators.max("maxFriendships", "$friendships")),
                     Aggregates.sort(Sorts.ascending("_id"))))
             .allowDiskUse(true)
@@ -109,7 +114,7 @@ public class ActivityReport {
                   + " Year: "
                   + ids.get("year")
                   + ",Month: "
-                  + ids.get("month")
+                  + ids.get(MONTH)
                   + ", Max number of new friendships: "
                   + document.get("maxFriendships"));
         });
@@ -121,18 +126,19 @@ public class ActivityReport {
         usersCollection
             .aggregate(
                 Arrays.asList(
-                    Aggregates.lookup("friendships", "id", "userId", "copiedFriends"),
+                    Aggregates.lookup(FRIENDSHIPS, "id", "userId", "copiedFriends"),
                     Aggregates.unwind("$copiedFriends"),
                     Aggregates.project(
                         Projections.fields(
                             Projections.include("id", "name", "surname"),
                             Projections.computed(
-                                "numberOfMovies", new Document("$size", "$movies")),
+                                NUMBER_OF_MOVIES, new Document(SIGNED_SIZE, "$movies")),
                             Projections.computed(
-                                "numberOfFriends", new Document("$size", "$copiedFriends.friends")),
+                                NUMBER_OF_MOVIES,
+                                new Document(SIGNED_SIZE, "$copiedFriends.friends")),
                             Projections.excludeId())),
                     Aggregates.match(Filters.gt("numberOfFriends", 100)),
-                    Aggregates.sort(Sorts.ascending("numberOfMovies"))))
+                    Aggregates.sort(Sorts.ascending(NUMBER_OF_MOVIES))))
             .allowDiskUse(true)
             .map(Document::new)
             .into(new ArrayList<>());
@@ -150,7 +156,7 @@ public class ActivityReport {
                         + ", Surname: "
                         + document.get("surname")
                         + ", Number of Movies: "
-                        + document.get("numberOfMovies")
+                        + document.get(NUMBER_OF_MOVIES)
                         + ", Number of Friends: "
                         + document.get("numberOfFriends")));
   }
